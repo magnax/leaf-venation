@@ -1,10 +1,12 @@
+# frozen_string_literal: true
+
 require 'raylib/dsl'
 require 'raylib/raymath'
 require 'pry'
 
 #
 # Leaf venation visualization
-# 
+#
 # First version - the goal is to just implement the algorithm
 # in simplest form - it will be then base to further refactorings ;-)
 #
@@ -57,13 +59,14 @@ class Auxin
 end
 
 PHASE = [
-  {key: :init, desc: 'Initial state'},
-  {key: :pull, desc: 'Discover veins affected'},
-  {key: :pull_normalized, desc: 'Normalize vectors to auxin\'s closest vein'},
-  {key: :add, desc: 'Add all vectors to auxin\'s closest vein'},
-  {key: :grow, desc: 'Grow new vein'},
-  {key: :populate, desc: 'Populate new auxin sources'}
-]
+  { key: :init, desc: 'Initial state' },
+  { key: :pull, desc: 'Discover veins affected' },
+  { key: :pull_normalized, desc: 'Normalize vectors to auxin\'s closest vein' },
+  { key: :add, desc: 'Add all vectors to auxin\'s closest vein' },
+  { key: :grow, desc: 'Grow new vein' },
+  { key: :populate, desc: 'Populate new auxin sources' }
+].freeze
+
 PHASES = PHASE.cycle
 AUXIN_CREATION_RATE = 3
 AUXIMITY = 50
@@ -75,7 +78,7 @@ phase = PHASES.next
 @show_vein_proximity = false
 
 def show_info(phase, top)
-  draw_text("#{PHASE.index(phase) + 1}. [#{phase[:key].to_s}] - #{phase[:desc]}.", 20, top, 21, LIGHTGRAY)
+  draw_text("#{PHASE.index(phase) + 1}. [#{phase[:key]}] - #{phase[:desc]}.", 20, top, 21, LIGHTGRAY)
 end
 
 def show_veins
@@ -86,10 +89,10 @@ def show_veins
   end
 end
 
-def add_auxins(w, h)
+def add_auxins(width, height)
   (1..AUXIN_CREATION_RATE).each do
-    position = Raylib::Vector2.create(rand(w), rand(h))
-    
+    position = Raylib::Vector2.create(rand(width), rand(height))
+
     auxin = Auxin.new(position)
     @auxins.push(auxin)
   end
@@ -115,10 +118,9 @@ def recalculate_and_draw_closest_veins
 end
 
 def show_normalized_closest_veins_vectors
-  @veins.each do |vein|
-    vein.reset_influence
-  end
-  @auxins.each_with_index do |auxin, i|
+  @veins.each(&:reset_influence)
+
+  @auxins.each do |auxin|
     vs = vector2_subtract(auxin.position, auxin.closest_vein.position)
     vsn = vector2_scale(vector2_normalize(vs), 50)
     a1 = vector2_add(vsn, auxin.closest_vein.position)
@@ -144,7 +146,7 @@ def grow_new_vein
   @veins.each do |vein|
     auxins_to_remove = []
     new_growth_pos = vein.fetch_new_growth_position
-    
+
     if new_growth_pos
       new_vein = Vein.new(new_growth_pos)
       @veins.push(new_vein)
@@ -156,35 +158,31 @@ def grow_new_vein
         end
       end
     end
-    
+
     @auxins = @auxins.reject { |auxin| auxins_to_remove.include?(@auxins.index(auxin)) }
   end
 end
 
-def populate_new_auxins(w, h)
+def populate_new_auxins(width, height)
   n = 0
   while n < AUXIN_CREATION_RATE
-    position = Raylib::Vector2.create(rand(w), rand(h))
+    position = Raylib::Vector2.create(rand(width), rand(height))
 
     correct_auxin_position = true
     @auxins.each do |auxin|
-      if vector2_distance(position, auxin.position) <= AUXIMITY
-        correct_auxin_position = false
-      end
+      correct_auxin_position = false if vector2_distance(position, auxin.position) <= AUXIMITY
     end
 
     @veins.each do |vein|
-      if vector2_distance(position, vein.position) <= VEIN_PROXIMITY
-        correct_auxin_position = false
-      end
+      correct_auxin_position = false if vector2_distance(position, vein.position) <= VEIN_PROXIMITY
     end
 
-    if correct_auxin_position
-      auxin = Auxin.new(position)
-      @auxins.push(auxin)
-      n +=1
-    end
-  end 
+    next unless correct_auxin_position
+
+    auxin = Auxin.new(position)
+    @auxins.push(auxin)
+    n += 1
+  end
   @populated = true
 end
 
@@ -195,7 +193,7 @@ init_window(1200, 1000, 'Leaf venation patterns demo')
 w = get_screen_width
 h = get_screen_height
 
-position = Raylib::Vector2.create(w/2, h/4*3)
+position = Raylib::Vector2.create(w / 2, h / 4 * 3)
 
 vein = Vein.new(position)
 @veins.push(vein)
@@ -208,13 +206,9 @@ until window_should_close
     phase = PHASES.next
   end
 
-  if is_key_pressed(KEY_A)
-    @show_auximity = !@show_auximity
-  end
+  @show_auximity = !@show_auximity if is_key_pressed(KEY_A)
 
-  if is_key_pressed(KEY_V)
-    @show_vein_proximity = !@show_vein_proximity
-  end
+  @show_vein_proximity = !@show_vein_proximity if is_key_pressed(KEY_V)
 
   begin_drawing
   clear_background(get_color(0x181818FF))
