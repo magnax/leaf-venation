@@ -20,6 +20,7 @@ class Vein
     @color = BLUE
     @inner_color = BLACK
     @influence_vectors = []
+    @new_growth_position = nil
   end
 
   def reset_influence
@@ -28,6 +29,18 @@ class Vein
 
   def add_influence(vector)
     @influence_vectors.push(vector)
+  end
+
+  def save_new_growth_position(pos)
+    @new_growth_position = pos
+  end
+
+  def fetch_new_growth_position
+    @new_growth_position
+  end
+
+  def clear_growth_position
+    @new_growth_position = nil
   end
 end
 
@@ -47,7 +60,8 @@ PHASE = [
   {key: :init, desc: 'Initial state'},
   {key: :pull, desc: 'Discover veins affected'},
   {key: :pull_normalized, desc: 'Normalize vectors to auxin\'s closest vein'},
-  {key: :add, desc: 'Add all vectors to auxin\'s closest vein'}
+  {key: :add, desc: 'Add all vectors to auxin\'s closest vein'},
+  {key: :grow, desc: 'Grow new vein'}
 ]
 PHASES = PHASE.cycle
 AUXIN_CREATION_RATE = 3
@@ -87,8 +101,8 @@ def recalculate_and_draw_closest_veins
       if vector2_distance(vein.position, auxin.position) < vector2_distance(auxin.closest_vein.position, auxin.position)
         auxin.closest_vein = vein
       end
-      draw_line_v(auxin.closest_vein.position, auxin.position, WHITE)
     end
+    draw_line_v(auxin.closest_vein.position, auxin.position, WHITE)
   end
 end
 
@@ -111,9 +125,21 @@ def add_and_normalize_influences
     influence = vein.influence_vectors.inject(v) do |sum, vector|
       sum = vector2_add(sum, vector)
     end
-    a1 = vector2_scale(vector2_normalize(influence), 30)
+    a1 = vector2_scale(vector2_normalize(influence), vein.radius * 2)
     a2 = vector2_add(a1, vein.position)
+    vein.save_new_growth_position(a2)
     draw_line_ex(a2, vein.position, 3, RED)
+  end
+end
+
+def grow_new_vein
+  @veins.each do |vein|
+    new_growth_pos = vein.fetch_new_growth_position
+    if new_growth_pos
+      new_vein = Vein.new(new_growth_pos)
+      @veins.push(new_vein)
+      vein.clear_growth_position
+    end
   end
 end
 
@@ -147,6 +173,8 @@ until window_should_close
     show_normalized_closest_veins_vectors
   when :add
     add_and_normalize_influences
+  when :grow
+    grow_new_vein
   end
   show_info(phase, h - 30)
   end_drawing
