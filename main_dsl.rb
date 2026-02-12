@@ -18,22 +18,35 @@ class Vein
     @inner_radius = 5
     @color = BLUE
     @inner_color = BLACK
+    @influence_vectors = []
+  end
+
+  def reset_influence
+    @influence_vectors = []
+  end
+
+  def add_influence(vector)
+    @influence_vectors.push(vector)
   end
 end
 
 class Auxin
   attr_reader :position, :radius, :color
+  attr_accessor :closest_vein
 
   def initialize(position)
     @position = position
     @radius = 8
     @color = RED
+    @closest_vein = nil
   end
 end
 
 PHASE = [
   {key: :init, desc: 'Initial state'},
-  {key: :pull, desc: 'Discover veins affected'}
+  {key: :pull, desc: 'Discover veins affected'},
+  {key: :pull_normalized, desc: 'Normalize vectors to auxin\'s closest vein'},
+  {key: :add, desc: 'Add all vectors to auxin\'s closest vein'}
 ]
 PHASES = PHASE.cycle
 AUXIN_CREATION_RATE = 3
@@ -66,10 +79,35 @@ def show_auxins
   end
 end
 
+def recalculate_and_draw_closest_veins
+  @auxins.each do |auxin|
+    auxin.closest_vein = @veins.first
+    @veins.each do |vein|
+      if vector2_distance(vein.position, auxin.position) < vector2_distance(auxin.closest_vein.position, auxin.position)
+        auxin.closest_vein = vein
+      end
+      draw_line_v(auxin.closest_vein.position, auxin.position, WHITE)
+    end
+  end
+end
+
+def show_normalized_closest_veins_vectors
+  @veins.each do |vein|
+    vein.reset_influence
+  end
+  @auxins.each_with_index do |auxin, i|
+    vs = vector2_subtract(auxin.position, auxin.closest_vein.position)
+    vsn = vector2_scale(vector2_normalize(vs), 50)
+    a1 = vector2_add(vsn, auxin.closest_vein.position)
+    auxin.closest_vein.add_influence(vsn)
+    draw_line_v(a1, auxin.closest_vein.position, YELLOW)
+  end
+end
+
 @veins = []
 @auxins = []
 
-init_window(1200, 900, 'Leaf venation patterns demo')
+init_window(1200, 1000, 'Leaf venation patterns demo')
 w = get_screen_width
 h = get_screen_height
 
@@ -91,15 +129,9 @@ until window_should_close
   show_auxins
   case phase[:key]
   when :pull
-    @auxins.each do |auxin|
-      closest_vein = @veins.first
-      @veins.each do |vein|
-        if vector2_distance(vein.position, auxin.position) < vector2_distance(closest_vein.position, auxin.position)
-          closest_vein = vein
-        end
-        draw_line_v(closest_vein.position, auxin.position, WHITE)
-      end
-    end
+    recalculate_and_draw_closest_veins
+  when :pull_normalized
+    show_normalized_closest_veins_vectors
   end
   show_info(phase, h - 30)
   end_drawing
