@@ -10,7 +10,8 @@ require 'pry'
 #
 
 class Vein
-  attr_reader :position, :radius, :inner_radius, :color, :inner_color
+  attr_reader :position, :radius, :inner_radius, :color, :inner_color,
+              :influence_vectors
 
   def initialize(position)
     @position = position
@@ -104,6 +105,18 @@ def show_normalized_closest_veins_vectors
   end
 end
 
+def add_and_normalize_influences
+  @veins.each do |vein|
+    v = Raylib::Vector2.create(0, 0)
+    influence = vein.influence_vectors.inject(v) do |sum, vector|
+      sum = vector2_add(sum, vector)
+    end
+    a1 = vector2_scale(vector2_normalize(influence), 30)
+    a2 = vector2_add(a1, vein.position)
+    draw_line_ex(a2, vein.position, 3, RED)
+  end
+end
+
 @veins = []
 @auxins = []
 
@@ -132,6 +145,8 @@ until window_should_close
     recalculate_and_draw_closest_veins
   when :pull_normalized
     show_normalized_closest_veins_vectors
+  when :add
+    add_and_normalize_influences
   end
   show_info(phase, h - 30)
   end_drawing
