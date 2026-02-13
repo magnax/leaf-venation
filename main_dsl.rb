@@ -82,7 +82,7 @@ def show_info(phase, top)
 end
 
 def add_veins(width, height)
-  position = Raylib::Vector2.create(w / 2, h / 4 * 3)
+  position = Raylib::Vector2.create(width / 2, height / 4 * 3)
 
   vein = Vein.new(position)
   @veins.push(vein)
