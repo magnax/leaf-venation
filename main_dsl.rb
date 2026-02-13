@@ -72,13 +72,20 @@ AUXIN_CREATION_RATE = 3
 AUXIMITY = 50
 VEIN_PROXIMITY = 50
 
-phase = PHASES.next
+@phase = PHASES.next
 @populated = false
 @show_auximity = false
 @show_vein_proximity = false
 
 def show_info(phase, top)
   draw_text("#{PHASE.index(phase) + 1}. [#{phase[:key]}] - #{phase[:desc]}.", 20, top, 21, LIGHTGRAY)
+end
+
+def add_veins(width, height)
+  position = Raylib::Vector2.create(w / 2, h / 4 * 3)
+
+  vein = Vein.new(position)
+  @veins.push(vein)
 end
 
 def show_veins
@@ -186,35 +193,11 @@ def populate_new_auxins(width, height)
   @populated = true
 end
 
-@veins = []
-@auxins = []
-
-init_window(1200, 1000, 'Leaf venation patterns demo')
-w = get_screen_width
-h = get_screen_height
-
-position = Raylib::Vector2.create(w / 2, h / 4 * 3)
-
-vein = Vein.new(position)
-@veins.push(vein)
-
-add_auxins(w, h)
-
-until window_should_close
-  if is_key_pressed(KEY_SPACE)
-    @populated = false
-    phase = PHASES.next
-  end
-
-  @show_auximity = !@show_auximity if is_key_pressed(KEY_A)
-
-  @show_vein_proximity = !@show_vein_proximity if is_key_pressed(KEY_V)
-
-  begin_drawing
+def render(w, h)
   clear_background(get_color(0x181818FF))
   show_veins
   show_auxins
-  case phase[:key]
+  case @phase[:key]
   when :pull
     recalculate_and_draw_closest_veins
   when :pull_normalized
@@ -226,7 +209,31 @@ until window_should_close
   when :populate
     populate_new_auxins(w, h) unless @populated
   end
-  show_info(phase, h - 30)
+  show_info(@phase, h - 30)
+end
+
+@veins = []
+@auxins = []
+
+init_window(1200, 1000, 'Leaf venation patterns demo')
+w = get_screen_width
+h = get_screen_height
+
+add_veins(w, h)
+add_auxins(w, h)
+
+until window_should_close
+  if is_key_pressed(KEY_SPACE)
+    @populated = false
+    @phase = PHASES.next
+  end
+
+  @show_auximity = !@show_auximity if is_key_pressed(KEY_A)
+
+  @show_vein_proximity = !@show_vein_proximity if is_key_pressed(KEY_V)
+
+  begin_drawing
+  render(w, h)
   end_drawing
 end
 
